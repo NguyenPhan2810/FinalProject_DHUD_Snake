@@ -141,7 +141,7 @@ class Snake extends GameObject
     {
         let jiggleDir = this.direction;
 
-        if (totalElapsedTime > 3)
+        if (totalElapsedTime > 3 && boostSpeedMultiplier <= 1)
         {
             const jiggleFreq = 3 * (this.speed / 100) * boostSpeedMultiplier;
             const jiggleAngle = Math.PI * 0.2;
@@ -451,7 +451,7 @@ window.addEventListener("keydown", function (e)
         if (player.direction[0] != 1)
             player.direction = [-1, 0];
     }
-    else if (e.shiftKey)
+    else if (e.keyCode === 32 /* space */)
     {
         boostSpeedMultiplier = maxBoostSpeedMultiplier;
     }
@@ -459,7 +459,7 @@ window.addEventListener("keydown", function (e)
 
 window.addEventListener("keyup", function (e)
 {
-    if (!e.shiftKey)
+    if (e.keyCode === 32 /* space */)
     {
         boostSpeedMultiplier = 1;
     }
