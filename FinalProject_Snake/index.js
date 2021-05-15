@@ -21,7 +21,7 @@ let score = 0;
 let highestScore = 0;
 let initialLength = 29;
 let numberOfFoodsEaten = 0;
-let greatFoodSpawnRate = 5; // Number of foods eaten to spawn a greate food
+let greatFoodSpawnRate = 4; // Number of foods eaten to spawn a greate food
 const maxBoostSpeedMultiplier = 10;
 let boostSpeedMultiplier = 1;
 
@@ -102,7 +102,7 @@ class Snake extends GameObject
 
         this.speed = 100;
         this.tailDistance = 1;
-        this.width = 6;
+        this.width = 7;
 
         this.length = 1;
         this.tails = [[posX, posY]];
@@ -139,9 +139,27 @@ class Snake extends GameObject
 
     UpdatePosition(dt)
     {
+        let jiggleDir = this.direction;
+
+        if (totalElapsedTime > 3)
+        {
+            const jiggleFreq = 3 * (this.speed / 100) * boostSpeedMultiplier;
+            const jiggleAngle = Math.PI * 0.2;
+
+            // angle between directional vector and x axis
+            let deltaAlpha = Math.sin(totalElapsedTime * Math.PI * 2 * jiggleFreq) * jiggleAngle / 2;
+
+            let alpha = Math.acos(this.direction[0]);
+            if (this.direction[1] != 0)
+                alpha *= Math.sign(this.direction[1]);
+            alpha += deltaAlpha;
+
+            jiggleDir = [Math.cos(alpha), Math.sin(alpha)];
+        }
+        
         let updateParam = this.speed * boostSpeedMultiplier * dt;
-        this.position[0] = this.position[0] + this.direction[0] * updateParam;
-        this.position[1] = this.position[1] + this.direction[1] * updateParam;
+        this.position[0] = this.position[0] + jiggleDir[0] * updateParam;
+        this.position[1] = this.position[1] + jiggleDir[1] * updateParam;
 
         this.tails[0] = this.position;
     }
@@ -206,6 +224,8 @@ class Food extends GameObject
         this.size = 10;
         this.value = 10;
         this.color = "#12f812";
+
+        new AnimationRing(this.position[0], this.position[1], this.size * 10, 1, this.color);
     }
 
     Update(dt)
@@ -250,6 +270,8 @@ class GreatFood extends Food
         this.value = 40;
         this.color = "yellow";
         this.decayTime = 4;
+
+        new AnimationRing(this.position[0], this.position[1], this.size * 10, 1, this.color);
     }
 
     Update(dt)
@@ -271,6 +293,40 @@ class GreatFood extends Food
         player.speed += this.value * 1;
         this.Destroy();
         drawGreenOverlay();
+    }
+}
+
+class AnimationRing extends GameObject
+{
+    constructor(x, y, radius, decayTime, color = "white")
+    {
+        super(x, y);
+
+        this.position = [x, y];
+        this.decayTime = decayTime;
+        this.radius = radius;
+        this.color = color;
+    }
+
+    Update(dt)
+    {
+        this.decayTime -= dt;
+
+        if (this.decayTime <= 0)
+            this.Destroy();
+
+        this.radius -= this.radius * 2 * dt / this.decayTime;
+    }
+
+    Draw()
+    {
+        ctx.lineWidth = 1;
+
+        ctx.strokeStyle = this.color;
+
+        ctx.arc(this.position[0], this.position[1], this.radius, 0, Math.PI * 2, false);
+
+        ctx.stroke();
     }
 }
 
@@ -301,6 +357,7 @@ function start()
     lastTime = 0;
     totalElapsedTime = 0;
     elapsedSinceLastLoop = 0;
+    numberOfFoodsEaten = 0;
     gameOver = false;
 
     updateScore();
