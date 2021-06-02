@@ -11,8 +11,8 @@ let player;
 let food;
 let greatFood;
 
-let pause = false;
 let gameOver = false;
+let isGamePlaying = false;
 let startingTime= 0;
 let lastTime = 0;
 let totalElapsedTime = 0;
@@ -20,8 +20,10 @@ let elapsedSinceLastLoop = 0;
 let score = 0;
 let highestScore = 0;
 let initialLength = 29;
+let tailSpacing = 3;
 let numberOfFoodsEaten = 0;
 let greatFoodSpawnRate = 4; // Number of foods eaten to spawn a greate food
+let greatFoodDecayTime = 4;
 const maxBoostSpeedMultiplier = 10;
 let boostSpeedMultiplier = 1;
 
@@ -101,7 +103,7 @@ class Snake extends GameObject
         super(posX, posY);
 
         this.speed = 100;
-        this.tailDistance = 1;
+        this.tailDistance = tailSpacing;
         this.width = 7;
 
         this.length = 1;
@@ -173,20 +175,13 @@ class Snake extends GameObject
                 
             let mag = distance(thisTail, nextTail);
 
-            if (mag < 0.1)
+            if (mag < this.tailDistance)
                 continue;
 
             let dir = [(nextTail[0] - thisTail[0]) / mag, (nextTail[1] - thisTail[1]) / mag];
 
-            if (mag < this.tailDistance)
-            {
-                continue;
-            }
-            else
-            {
-                thisTail[0] = nextTail[0] - dir[0] * this.tailDistance * 2;
-                thisTail[1] = nextTail[1] - dir[1] * this.tailDistance * 2;
-            }
+            thisTail[0] = nextTail[0] - dir[0] * this.tailDistance;
+            thisTail[1] = nextTail[1] - dir[1] * this.tailDistance;
         }
     }
 
@@ -269,7 +264,7 @@ class GreatFood extends Food
         this.size = 40;
         this.value = 40;
         this.color = "yellow";
-        this.decayTime = 4;
+        this.decayTime = greatFoodDecayTime;
 
         new AnimationRing(this.position[0], this.position[1], this.size * 10, 1, this.color);
     }
@@ -316,6 +311,8 @@ class AnimationRing extends GameObject
             this.Destroy();
 
         this.radius -= this.radius * 2 * dt / this.decayTime;
+        if (this.radius <= 0)
+            this.radius = 0.1;
     }
 
     Draw()
@@ -330,12 +327,14 @@ class AnimationRing extends GameObject
     }
 }
 
+// Main game loop
 function GameLoop(currentTime)
 {
     if (gameOver)
         return;
 
     animationId = requestAnimationFrame(GameLoop);
+
     gameUpdate();
     gameDraw();
 
@@ -347,6 +346,7 @@ function GameLoop(currentTime)
     lastTime = currentTime;
 }
 
+// Reset params and start game loop
 function start()
 {
     GameObject.AllGameObjects = [];
@@ -359,11 +359,13 @@ function start()
     elapsedSinceLastLoop = 0;
     numberOfFoodsEaten = 0;
     gameOver = false;
+    isGamePlaying = true;
 
     updateScore();
     animationId = requestAnimationFrame(GameLoop);
 }
 
+// Display gameover screen
 function end()
 {
     drawRedOverlay();
@@ -371,19 +373,19 @@ function end()
     cancelAnimationFrame(animationId);
 
     highestScoreEl.innerHTML = highestScore;
-
     modalEl.style.display = "flex";
+    isGamePlaying = false;
 }
 
 function checkEndGame()
 {
-    for (let i = 10; i < player.length; ++i)
+    for (let i = 2; i < player.length; ++i)
     {
         let dis = distance(player.position, player.tails[i]);
 
-        if (dis < 1.5)
+        if (dis < tailSpacing)
         {
-            player.RemoveTails(player.length - i);
+            //player.RemoveTails(player.length - i);
             gameOver = true;
             break;
         }
@@ -415,7 +417,7 @@ function gameUpdate()
 function gameDraw()
 {
     // Clear screen
-    ctx.fillStyle = "rgba(0.017, 0.017, 0.017, 0.08)";
+    ctx.fillStyle = "rgba(0.017, 0.017, 0.017, 0.1)";
     ctx.fillRect(0, 0, canvas.width, canvas.height);
 
     // Draw objects
@@ -465,6 +467,23 @@ window.addEventListener("keyup", function (e)
     }
 });
 
+// For demo real grid only
+onmousedown = () =>
+{
+    if (!isGamePlaying)
+        return;
+
+    var e = window.event;
+
+    var posX = e.clientX;
+    var posY = e.clientY;
+
+    var mag = distance([posX, posY], player.position);
+
+    player.direction[0] = (posX - player.position[0]) / mag;
+    player.direction[1] = (posY - player.position[1]) / mag;
+}
+
 onresize = () =>
 {
     canvas.height = window.innerHeight;
@@ -473,6 +492,7 @@ onresize = () =>
     gameDraw();
 }
 
+// Entry point
 startGameBtn.addEventListener("click", () =>
 {
     modalEl.style.display = "none";
